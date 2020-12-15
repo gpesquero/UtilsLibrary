@@ -612,6 +612,76 @@ public class OsmDatabase {
 		return true;
 	}
 	
+	public Coord getWayCoord(long wayId) {
+		
+		Way way = getWayById(wayId);
+		
+		return getWayCoord(way);
+	}
+	
+	public Coord getWayCoord(Way way) {
+		
+		if (way == null) {
+			
+			return null;
+		}
+		
+		List<WayNode> wayNodes = way.getWayNodes();
+		
+		if (wayNodes.size() == 0) {
+			
+			return null;
+		}
+		
+		long firstNodeId = wayNodes.get(0).getNodeId();
+		
+		return getNodeCoord(firstNodeId);
+	}
+	
+	public Coord getRelationCoord(long relationId) {
+		
+		Relation relation = getRelationById(relationId);
+		
+		return getRelationCoord(relation);
+	}
+	
+	public Coord getRelationCoord(Relation relation) {
+		
+		List<RelationMember> members = relation.getMembers();
+		
+		Iterator<RelationMember> iter = members.iterator();
+		
+		while(iter.hasNext()) {
+			
+			RelationMember member = iter.next();
+			
+			EntityType type = member.getMemberType();
+			
+			if (type == EntityType.Node) {
+				
+				return getNodeCoord(member.getMemberId());
+			}
+			else if (type == EntityType.Way) {
+				
+				return getWayCoord(member.getMemberId());
+			}
+			else if (type == EntityType.Relation) {
+				
+				Coord coord = getRelationCoord(member.getMemberId());
+				
+				if (coord != null) {
+					
+					return coord;
+				}
+			}
+		}
+		
+		Log.warning("No valid coord found in <Relation #"+relation.getId()+">");
+		
+		// No nodes or ways found in relation		
+		return null;
+	}
+	
 	public Node getNodeById(long nodeId) {
 		
 		Node node=null;
@@ -665,7 +735,7 @@ public class OsmDatabase {
 			
 			if (!rs.next()) {
 				
-				Log.error("getNodeCoord(): ResultSet is empty of node <"+nodeId+">");
+				Log.warning("getNodeCoord(): ResultSet is empty of node <"+nodeId+">");
 				
 				coord=null;
 			}
@@ -934,12 +1004,40 @@ public class OsmDatabase {
 			
 		} catch (SQLException e) {
 			
-			System.out.println("Error: "+e.getMessage());
+			Log.error("getRelationTags() error: "+e.getMessage());
 			
 			tags=null;
 		}
 		
 		return tags;
+	}
+	
+	public String getRelationTagValue(long relId, String tagKey) {
+		
+		String tagValue = null;
+		
+		Collection<Tag> tags = getRelationTags(relId);
+		
+		if (tags == null) {
+			
+			return null;
+		}
+		
+		Iterator<Tag> iter = tags.iterator();
+		
+		while (iter.hasNext()) {
+			
+			Tag tag = iter.next();
+			
+			if (tag.getKey().compareTo(tagKey) == 0) {
+				
+				return tag.getValue();
+			}
+		}
+		
+		Log.warning("Tag key '"+tagKey+"' not found in relation with Id #"+relId);
+		
+		return null;
 	}
 	
 	public List<RelationMember> getRelationMembers(long relId) {
