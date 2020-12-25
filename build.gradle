@@ -25,9 +25,9 @@ dependencies {
     implementation 'com.google.guava:guava:28.2-jre'
     
     // Osmosis dependencies
-	implementation 'org.openstreetmap.osmosis:osmosis-core:0.48.3'
-    implementation 'org.openstreetmap.osmosis:osmosis-extract:0.48.3'
-    implementation 'org.openstreetmap.osmosis:osmosis-pbf2:0.48.3'
+	//implementation 'org.openstreetmap.osmosis:osmosis-core:0.48.3'
+    //implementation 'org.openstreetmap.osmosis:osmosis-extract:0.48.3'
+    //implementation 'org.openstreetmap.osmosis:osmosis-pbf2:0.48.3'
 
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'

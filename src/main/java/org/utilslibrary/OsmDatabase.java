@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -27,31 +28,41 @@ import org.openstreetmap.osmosis.core.domain.v0_6.WayNode;
 
 public class OsmDatabase {
 	
-	static final String DB_URL_PREFIX = "jdbc:sqlite:";	
+	static final String DB_URL_PREFIX = "jdbc:sqlite:";
 	
-	Connection mConn=null;
+	static final String DB_VERSION = "1.00";
 	
-	private String mSqlInsertNode="INSERT INTO nodes(id, lon, lat) VALUES(?,?,?)";
-	private String mSqlInsertNodeTags="INSERT INTO node_tags(node_id, key, value) VALUES(?,?,?)";
+	Connection mConn = null;
 	
-	private String mSqlInsertWay="INSERT INTO ways(id) VALUES(?)";
-	private String mSqlInsertWayTags="INSERT INTO way_tags(way_id, key, value) VALUES(?,?,?)";
-	private String mSqlInsertWayNodes="INSERT INTO way_nodes (way_id, sequence, node_id) VALUES(?,?,?)";
+	private String mSqlInsertNode = "INSERT INTO nodes(id, lon, lat) VALUES(?,?,?)";
+	private String mSqlInsertNodeTags = "INSERT INTO node_tags(node_id, key, value) VALUES(?,?,?)";
+	
+	private String mSqlInsertWay = "INSERT INTO ways(id) VALUES(?)";
+	private String mSqlInsertWayTags = "INSERT INTO way_tags(way_id, key, value) VALUES(?,?,?)";
+	private String mSqlInsertWayNodes = "INSERT INTO way_nodes (way_id, sequence, node_id) VALUES(?,?,?)";
 		
-	private String mSqlInsertRelation="INSERT INTO relations(id) VALUES(?)";
-	private String mSqlInsertRelationTags="INSERT INTO relation_tags(rel_id, key, value) VALUES(?,?,?)";
-	private String mSqlInsertRelationMembers="INSERT INTO relation_members (rel_id, sequence, member_type, member_id, member_role) VALUES(?,?,?,?,?)";
+	private String mSqlInsertRelation = "INSERT INTO relations(id) VALUES(?)";
+	private String mSqlInsertRelationTags = "INSERT INTO relation_tags(rel_id, key, value) VALUES(?,?,?)";
+	private String mSqlInsertRelationMembers = "INSERT INTO relation_members (rel_id, sequence, member_type, member_id, member_role) VALUES(?,?,?,?,?)";
 	
-	private PreparedStatement mPrepStmtInsertNode=null;
-	private PreparedStatement mPrepStmtInsertNodeTags=null;
+	private PreparedStatement mPrepStmtInsertNode = null;
+	private PreparedStatement mPrepStmtInsertNodeTags = null;
 	
-	private PreparedStatement mPrepStmtInsertWay=null;
-	private PreparedStatement mPrepStmtInsertWayTags=null;
-	private PreparedStatement mPrepStmtInsertWayNodes=null;
+	private PreparedStatement mPrepStmtInsertWay = null;
+	private PreparedStatement mPrepStmtInsertWayTags = null;
+	private PreparedStatement mPrepStmtInsertWayNodes = null;
 	
-	private PreparedStatement mPrepStmtInsertRelation=null;
-	private PreparedStatement mPrepStmtInsertRelationTags=null;
-	private PreparedStatement mPrepStmtInsertRelationMembers=null;
+	private PreparedStatement mPrepStmtInsertRelation = null;
+	private PreparedStatement mPrepStmtInsertRelationTags = null;
+	private PreparedStatement mPrepStmtInsertRelationMembers = null;
+	
+	public String mVersion;
+	public String mCreationDate;
+	public String mCreationTime;
+	public double mMinLon, mMaxLon;
+	public double mMinLat, mMaxLat;
+	public String mPbfDateStamp;
+	public String mPbfTimeStamp;
 	
 	public OsmDatabase() {
 		
@@ -60,179 +71,214 @@ public class OsmDatabase {
 	public boolean openDatabase(String fileName) {
 		
 		// Open a connection
-		Log.info("Opening SQLite database <"+fileName+">: ");
+		Log.info("Opening SQLite database <" + fileName + ">: ");
 					
 		try {
-			mConn = DriverManager.getConnection(DB_URL_PREFIX+fileName);
+			mConn = DriverManager.getConnection(DB_URL_PREFIX + fileName);
 			
 		} catch (SQLException e) {
 			
-			Log.error("DriverManager getConnection error: "+e.getMessage());
+			Log.error("DriverManager getConnection error: " + e.getMessage());
 			
 			return false;
 		}
 		
-		Log.info("Database <"+fileName+"> opened successfully");
+		Log.info("Database <" + fileName + "> opened successfully");
 		
 		return true;
 	}
 	
+	public void closeDatabase() {
+		
+		try {
+			mConn.close();
+			
+		} catch (SQLException e) {
+			
+			Log.error("Error closing database: " + e.getMessage());
+		}
+		
+		mConn = null;
+	}
+	
 	public boolean createDatabase(String fileName) {
 		
-		Statement stmt=null;
-		String sql=null;
+		Statement stmt = null;
+		String sql = null;
+		
+		String logText = "";
 		
 		try {
 			
 			// Open a connection
-			System.out.println("Creating SQLite database <"+fileName+">: ");
+			Log.info("Creating SQLite database <" + fileName + ">...");
 			
-			System.out.print(" - Establishing SQLite Connection... ");
+			logText = " - Establishing SQLite Connection... ";
 			mConn = DriverManager.getConnection(DB_URL_PREFIX+fileName);
-			System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
 			stmt = mConn.createStatement();
 			
+			logText = " - Deleting table <db_info>... ";
+			sql = "DROP TABLE IF EXISTS db_info";
+			stmt.executeUpdate(sql);
+			Log.info(logText + "Ok!!");
+			
+			logText = " - Deleting table <nodes>... ";
 			sql = "DROP TABLE IF EXISTS nodes";
-			System.out.print(" - Deleting table <nodes>... ");
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "DROP TABLE IF EXISTS node_tags";
-			System.out.print(" - Deleting table <node_tags>... ");
+			logText = " - Deleting table <node_tags>... ";
+			sql = "DROP TABLE IF EXISTS node_tags";
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "DROP TABLE IF EXISTS ways";
-			System.out.print(" - Deleting table <ways>... ");
+			logText = " - Deleting table <ways>... ";
+			sql = "DROP TABLE IF EXISTS ways";
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "DROP TABLE IF EXISTS way_tags";
-			System.out.print(" - Deleting table <way_tags>... ");
+			logText = " - Deleting table <way_tags>... ";
+			sql = "DROP TABLE IF EXISTS way_tags";
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "DROP TABLE IF EXISTS way_nodes";
-			System.out.print(" - Deleting table <way_nodes>... ");
+			logText = " - Deleting table <way_nodes>... ";
+			sql = "DROP TABLE IF EXISTS way_nodes";
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "DROP TABLE IF EXISTS relations";
-			System.out.print(" - Deleting table <relations>... ");
+			logText = " - Deleting table <relations>... ";
+			sql = "DROP TABLE IF EXISTS relations";
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "DROP TABLE IF EXISTS relation_tags";
-			System.out.print(" - Deleting table <relation_tags>... ");
+			logText = " - Deleting table <relation_tags>... ";
+			sql = "DROP TABLE IF EXISTS relation_tags";
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "DROP TABLE IF EXISTS relation_members";
-			System.out.print(" - Deleting table <relation_members>... ");
+			logText = " - Deleting table <relation_members>... ";
+			sql = "DROP TABLE IF EXISTS relation_members";
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "CREATE TABLE nodes (\n"
+			logText = " - Create table <db_info>... ";
+			sql = "CREATE TABLE db_info (\n"
+					+ "	version TEXT,\n"
+	                + "	creation_date TEXT,\n"
+	                + "	creation_time TEXT,\n"
+	                + "	min_lon REAL,\n"
+	                + "	max_lon REAL,\n"
+	                + "	min_lat REAL,\n"
+	                + "	max_lat REAL,\n"
+	                + "	pbf_date TEXT,\n"
+	                + "	pbf_time TEXT\n"
+	                + ");";
+			stmt.executeUpdate(sql);
+			Log.info(logText + "Ok!!");
+			
+			logText = " - Create table <nodes>... ";
+			sql = "CREATE TABLE nodes (\n"
 					+ "	id INTEGER PRIMARY KEY,\n"
 	                + "	lon REAL,\n"
 	                + "	lat REAL\n"
 	                + ");";
-			System.out.print(" - Create table <nodes>... ");
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "CREATE TABLE node_tags (\n"
+			logText = " - Create table <node_tags>... ";
+			sql = "CREATE TABLE node_tags (\n"
 					+ "	node_id INTEGER,\n"
 		    		+ " key TEXT,\n"
 		    		+ " value TEXT\n"
 	                + ");";
-			System.out.print(" - Create table <node_tags>... ");
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "CREATE TABLE ways (\n"
+			logText = " - Create table <ways>... ";
+			sql = "CREATE TABLE ways (\n"
 					+ "	id INTEGER PRIMARY KEY\n"
 	                + ");";
-			System.out.print(" - Create table <ways>... ");
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "CREATE TABLE way_tags (\n"
+			logText = " - Create table <way_tags>... ";
+			sql = "CREATE TABLE way_tags (\n"
 					+ "	way_id INTEGER,\n"
 		    		+ " key TEXT,\n"
 		    		+ " value TEXT\n"
 	                + ");";
-			System.out.print(" - Create table <way_tags>... ");
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "CREATE TABLE way_nodes (\n"
+			logText = " - Create table <way_nodes>... ";
+			sql = "CREATE TABLE way_nodes (\n"
 					+ "	way_id INTEGER,\n"
 					+ " sequence INTEGER,\n"
 					+ " node_id INTEGER\n"
 		    		+ ");";
-			System.out.print(" - Create table <way_nodes>... ");
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+			Log.info(logText + "Ok!!");
 			
-		    sql = "CREATE TABLE relations (\n"
+			logText = " - Create table <relations>... ";
+			sql = "CREATE TABLE relations (\n"
 					+ "	id INTEGER PRIMARY KEY\n"
 	                + ");";
-			System.out.print(" - Create table <relations>... ");
 			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
-		    
+			Log.info(logText + "Ok!!");
+			
+			logText = " - Create table <relation_tags>... ";
 		    sql = "CREATE TABLE relation_tags (\n"
 					+ "	rel_id INTEGER,\n"
 		    		+ " key TEXT,\n"
 		    		+ " value TEXT\n"
 	                + ");";
-			System.out.print(" - Create table <relation_tags>... ");
-			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
+		    stmt.executeUpdate(sql);
+			Log.info(logText + "Ok!!");
 			
-		    sql = "CREATE TABLE relation_members (\n"
+			logText = " - Create table <relation_members>... ";
+			sql = "CREATE TABLE relation_members (\n"
 					+ "	rel_id INTEGER,\n"
 					+ " sequence INTEGER,\n"
 		    		+ " member_type INTEGER,\n"
 		    		+ " member_id INTEGER,\n"
 		    		+ " member_role TEXT\n"
 	                + ");";
-			System.out.print(" - Create table <relation_members>... ");
-			stmt.executeUpdate(sql);
-		    System.out.println("Ok!");
-		    
-		    sql = "CREATE INDEX node_tags_index ON node_tags(node_id)";
-			System.out.print(" - Creating index of table <node_tags>... ");
-			stmt.executeUpdate(sql);
-			System.out.println("Ok!");
-		    
+		    stmt.executeUpdate(sql);
+			Log.info(logText + "Ok!!");
+			
+			logText = " - Creating index of table <node_tags>... ";
+			sql = "CREATE INDEX node_tags_index ON node_tags(node_id)";
+		    stmt.executeUpdate(sql);
+			Log.info(logText + "Ok!!");
+			
+			logText = " - Creating index of table <way_tags>... ";
 			sql = "CREATE INDEX way_tags_index ON way_tags(way_id)";
-			System.out.print(" - Creating index of table <way_tags>... ");
 			stmt.executeUpdate(sql);
-			System.out.println("Ok!");
-		    
-		    sql = "CREATE INDEX way_nodes_index ON way_nodes(way_id)";
-			System.out.print(" - Creating index of table <way_nodes>... ");
+			Log.info(logText + "Ok!!");
+			
+			logText = " - Creating index of table <way_nodes>... ";
+			sql = "CREATE INDEX way_nodes_index ON way_nodes(way_id)";
+		    stmt.executeUpdate(sql);
+			Log.info(logText + "Ok!!");
+			
+			logText = " - Creating index of table <relation_tags>... ";
+			sql = "CREATE INDEX relation_tags_index ON relation_tags(rel_id)";
+		    stmt.executeUpdate(sql);
+			Log.info(logText + "Ok!!");
+			
+			logText = " - Creating index of table <relation_members>... ";
+			sql = "CREATE INDEX relation_members_index ON relation_members(rel_id)";
 			stmt.executeUpdate(sql);
-			System.out.println("Ok!");
-		    
-		    sql = "CREATE INDEX relation_tags_index ON relation_tags(rel_id)";
-			System.out.print(" - Creating index of table <relation_tags>... ");
-			stmt.executeUpdate(sql);
-			System.out.println("Ok!");
-		    
-		    sql = "CREATE INDEX relation_members_index ON relation_members(rel_id)";
-			System.out.print(" - Creating index of table <relation_members>... ");
-			stmt.executeUpdate(sql);
-			System.out.println("Ok!");
-		    
+			Log.info(logText + "Ok!!");
+			
 		    stmt.close();			
 		}
 		catch(SQLException se) {
 			
-			System.out.println("Error: "+se.getMessage());
+			Log.error(logText + "SQL Error: " + se.getMessage());
 			
 			return false;
 		}
@@ -250,20 +296,21 @@ public class OsmDatabase {
 		}
 		
 		try {
-			mPrepStmtInsertNode=mConn.prepareStatement(mSqlInsertNode);
-			mPrepStmtInsertNodeTags=mConn.prepareStatement(mSqlInsertNodeTags);
 			
-			mPrepStmtInsertWay=mConn.prepareStatement(mSqlInsertWay);
-			mPrepStmtInsertWayTags=mConn.prepareStatement(mSqlInsertWayTags);
-			mPrepStmtInsertWayNodes=mConn.prepareStatement(mSqlInsertWayNodes);
+			mPrepStmtInsertNode = mConn.prepareStatement(mSqlInsertNode);
+			mPrepStmtInsertNodeTags = mConn.prepareStatement(mSqlInsertNodeTags);
 			
-			mPrepStmtInsertRelation=mConn.prepareStatement(mSqlInsertRelation);
-			mPrepStmtInsertRelationTags=mConn.prepareStatement(mSqlInsertRelationTags);
-			mPrepStmtInsertRelationMembers=mConn.prepareStatement(mSqlInsertRelationMembers);
+			mPrepStmtInsertWay = mConn.prepareStatement(mSqlInsertWay);
+			mPrepStmtInsertWayTags = mConn.prepareStatement(mSqlInsertWayTags);
+			mPrepStmtInsertWayNodes = mConn.prepareStatement(mSqlInsertWayNodes);
+			
+			mPrepStmtInsertRelation = mConn.prepareStatement(mSqlInsertRelation);
+			mPrepStmtInsertRelationTags = mConn.prepareStatement(mSqlInsertRelationTags);
+			mPrepStmtInsertRelationMembers = mConn.prepareStatement(mSqlInsertRelationMembers);
 					
 		} catch (SQLException e) {
 			
-			Log.error("Error prepareStatement(): "+e.getMessage());
+			Log.error("SQL Error in prepareStatement(): " + e.getMessage());
 		}
 		
 		return true;
@@ -271,10 +318,10 @@ public class OsmDatabase {
 	
 	public synchronized boolean addNode(Node node) {
 		
-		long nodeId=node.getId();
+		long nodeId = node.getId();
 		
-		double lon=node.getLongitude();
-		double lat=node.getLatitude();
+		double lon = node.getLongitude();
+		double lat = node.getLatitude();
 		
         try {
         	
@@ -285,7 +332,7 @@ public class OsmDatabase {
         }
         catch (SQLException e) {
         	
-            System.out.println("addNode(): ERROR: "+e.getMessage());
+            Log.error("addNode(): ERROR: "+e.getMessage());
             
             return false;
         }
@@ -310,7 +357,7 @@ public class OsmDatabase {
             }
             catch (SQLException e) {
             	
-                System.out.println("addNode() tag: ERROR: "+e.getMessage());
+            	Log.error("addNode() tag: ERROR: "+e.getMessage());
                 
                 return false;
             }
@@ -331,7 +378,7 @@ public class OsmDatabase {
         }
         catch (SQLException e) {
         	
-            System.out.println("addWay(): ERROR: "+e.getMessage());
+        	Log.error("addWay(): ERROR: "+e.getMessage());
             
             return false;
         }
@@ -357,7 +404,7 @@ public class OsmDatabase {
             }
             catch (SQLException e) {
             	
-                System.out.println("addWay() tag: ERROR: "+e.getMessage());
+            	Log.error("addWay() tag: ERROR: "+e.getMessage());
                 
                 return false;
             }
@@ -385,7 +432,7 @@ public class OsmDatabase {
             }
             catch (SQLException e) {
             	
-                System.out.println("addWay() wayNode: ERROR: "+e.getMessage());
+            	Log.error("addWay() wayNode: ERROR: "+e.getMessage());
                 
                 return false;
             }
@@ -408,7 +455,7 @@ public class OsmDatabase {
         }
         catch (SQLException e) {
         	
-            System.out.println("addRelation(): ERROR: "+e.getMessage());
+        	Log.error("addRelation(): ERROR: "+e.getMessage());
             
             return false;
         }
@@ -433,7 +480,7 @@ public class OsmDatabase {
             }
             catch (SQLException e) {
             	
-                System.out.println("addRelation() tag: ERROR: "+e.getMessage());
+            	Log.error("addRelation() tag: ERROR: "+e.getMessage());
                 
                 return false;
             }
@@ -473,7 +520,7 @@ public class OsmDatabase {
         		break;
         		
         	default:
-        		System.out.println("addRelation() member: Unknown relation member type");
+        		Log.warning("addRelation() member: Unknown relation member type");
         		memberType=-1;
                 break;
         	}
@@ -489,7 +536,7 @@ public class OsmDatabase {
             }
             catch (SQLException e) {
             	
-                System.out.println("addRelation() member: ERROR: "+e.getMessage());
+            	Log.error("addRelation() member: ERROR: "+e.getMessage());
                 
                 return false;
             }
@@ -502,7 +549,7 @@ public class OsmDatabase {
 	
 	public void runTest() {
 		
-		System.out.println("Starting runTest()...");
+		Log.info("Starting runTest()...");
 		
 		long id=100;
 		int version=0;
@@ -570,16 +617,16 @@ public class OsmDatabase {
 	
 	public boolean setAutoCommit(boolean mode) {
 		
-		System.out.print("OsmDatabase::setAutoCommit() to <"+mode+">... ");
+		String logText = "OsmDatabase::setAutoCommit() to <"+mode+">... ";
 		
 		try {
 			mConn.setAutoCommit(mode);
 			
-			System.out.println("Ok!!");
+			Log.info(logText + "Ok!!");
 		
 		} catch (SQLException e) {
 			
-			System.out.println("ERROR: "+e.getMessage());
+			Log.error(logText + "ERROR: "+e.getMessage());
 			
 			return false;
 		}
@@ -589,23 +636,25 @@ public class OsmDatabase {
 	
 	public boolean commit() {
 		
+		String logText = "";
+		
 		try {
 			
-			System.out.print("OsmDatabase:commit()... ");
+			logText = "OsmDatabase:commit()... ";
 			
-			Instant start=Instant.now();
+			Instant start = Instant.now();
 			
 			mConn.commit();
 			
-			Instant end=Instant.now();
+			Instant end = Instant.now();
 			
-			String text=String.format("Ok!! (Commit took "+Util.timeFormat(start, end)+")");
+			logText += String.format("Ok!! (Commit took " + Util.timeFormat(start, end) + ")");
 	        
-	        System.out.println(text);	        
+	        Log.info(logText);
 			
 		} catch (SQLException e) {
 			
-			System.out.println("Failed!! Error="+e.getMessage());
+			Log.error(logText + "Failed!! Error=" + e.getMessage());
 			return false;
 		}
 		
@@ -1014,8 +1063,6 @@ public class OsmDatabase {
 	
 	public String getRelationTagValue(long relId, String tagKey) {
 		
-		String tagValue = null;
-		
 		Collection<Tag> tags = getRelationTags(relId);
 		
 		if (tags == null) {
@@ -1422,5 +1469,109 @@ public void checkHikingSuperRoute(Relation relation) {
 	
 	public void checkHikingRoute(Relation relation) {
 	
+	}
+	
+	public void saveDatabaseInfo(OsmPbfFile pbf) {
+		
+		String sqlAddDatabaseInfo = "INSERT INTO db_info(version, creation_date, creation_time," +
+				" min_lon, max_lon, min_lat, max_lat, pbf_date, pbf_time) VALUES(?,?,?,?,?,?,?,?,?)";
+		try {
+			
+			PreparedStatement prepStmtAddDatabaseInfo = mConn.prepareStatement(sqlAddDatabaseInfo);
+			
+			LocalDateTime time = LocalDateTime.now();
+			
+			String dateString=String.format("%04d-%02d-%02d",
+					time.getYear(),
+					time.getMonthValue(),
+					time.getDayOfMonth());
+			
+			String timeString=String.format("%02d:%02d:%02d",
+					time.getHour(),
+					time.getMinute(),
+					time.getSecond());
+			
+			prepStmtAddDatabaseInfo.setString(1, DB_VERSION);
+        	prepStmtAddDatabaseInfo.setString(2, dateString);
+        	prepStmtAddDatabaseInfo.setString(3, timeString);
+        	prepStmtAddDatabaseInfo.setFloat(4, (float) pbf.mMinLon);
+        	prepStmtAddDatabaseInfo.setFloat(5, (float) pbf.mMaxLon);
+        	prepStmtAddDatabaseInfo.setFloat(6, (float) pbf.mMinLat);
+        	prepStmtAddDatabaseInfo.setFloat(7, (float) pbf.mMaxLat);
+        	prepStmtAddDatabaseInfo.setString(8, pbf.mFileDateStamp);
+        	prepStmtAddDatabaseInfo.setString(9, pbf.mFileTimeStamp);
+        	prepStmtAddDatabaseInfo.executeUpdate();
+        }
+        catch (SQLException e) {
+        	
+            Log.error("saveDatabaseInfo() SQL Error: " + e.getMessage());
+            
+            return;
+        }		
+	}
+	
+	public void readDatabaseInfo() {
+		
+		Log.info("Read Database Info...");
+		
+		String sql=
+				"SELECT\n" + 
+				" version,\n" + 
+				" creation_date,\n" + 
+				" creation_time,\n" + 
+				" min_lon,\n" + 
+				" max_lon,\n" + 
+				" min_lat,\n" + 
+				" max_lat,\n" + 
+				" pbf_date,\n" + 
+				" pbf_time\n" + 
+				"FROM\n" + 
+				" db_info";
+		
+		PreparedStatement pstmt = null;
+		
+		try {
+			pstmt = mConn.prepareStatement(sql);
+			
+			ResultSet rs = pstmt.executeQuery();
+			
+			while(rs.next()) {
+				
+				mVersion = rs.getString("version");
+				Log.info(" - DB Version: " + mVersion);
+				
+				mCreationDate = rs.getString("creation_date");
+				Log.info(" - DB Creation Date: " + mCreationDate);
+				
+				mCreationTime = rs.getString("creation_time");
+				Log.info(" - DB Creation Time: " + mCreationTime);
+				
+				mMinLon = rs.getFloat("min_lon");
+				Log.info(" - DB Min Lon: " + mMinLon);
+				
+				mMaxLon = rs.getFloat("max_lon");
+				Log.info(" - DB Max Lon: " + mMaxLon);
+				
+				mMinLat = rs.getFloat("min_lat");
+				Log.info(" - DB Min Lat: " + mMinLat);
+				
+				mMaxLat = rs.getFloat("max_lat");
+				Log.info(" - DB Max Lat: " + mMaxLat);
+				
+				mPbfDateStamp = rs.getString("pbf_date");
+				Log.info(" - PBF Date Stamp: " + mPbfDateStamp);
+				
+				mPbfTimeStamp = rs.getString("pbf_time");
+				Log.info(" - PBF Time Stamp: " + mPbfTimeStamp);
+			}
+			
+			rs.close();
+			
+			pstmt.close();
+			
+		} catch (SQLException e) {
+			
+			Log.error("readDatabaseInfo() SQL error: "+e.getMessage());
+		}
 	}
 }

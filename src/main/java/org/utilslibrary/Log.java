@@ -23,7 +23,7 @@ public class Log {
 	
 	private static void log(String typeString, String text) {
 		
-		LocalDateTime time=LocalDateTime.now();
+		LocalDateTime time = LocalDateTime.now();
 		
 		String dateString=String.format("%04d-%02d-%02d",
 				time.getYear(),
@@ -35,7 +35,7 @@ public class Log {
 				time.getMinute(),
 				time.getSecond());
 		
-		String logLine = dateString + " " + timeString + " " + typeString + ": " + text;
+		String logLine = dateString + " " + timeString + " " + typeString + " " + text;
 		
 		// Log to console...
 		System.out.println(logLine);
@@ -80,7 +80,7 @@ public class Log {
 					
 					if (!logDir.mkdirs()) {
 						
-						System.out.println(dateString + " " + timeString + " " + "((((ERROR)))): " +
+						System.out.println(dateString + " " + timeString + " " + "((((ERROR)))) " +
 								"Error in logDir.mkdirs()");
 					}
 				}
@@ -91,7 +91,7 @@ public class Log {
 				
 			} catch (IOException e) {
 				
-				System.out.println(dateString + " " + timeString + " " + "((((ERROR)))): " +
+				System.out.println(dateString + " " + timeString + " " + "((((ERROR)))) " +
 						e.getMessage());
 				
 				return;

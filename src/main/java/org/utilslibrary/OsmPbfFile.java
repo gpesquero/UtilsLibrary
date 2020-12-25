@@ -1,7 +1,9 @@
 package org.utilslibrary;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -16,11 +18,19 @@ import org.openstreetmap.osmosis.pbf2.v0_6.PbfReader;
 
 public class OsmPbfFile {
 	
-	File mOsmFile=null;
+	File mOsmFile = null;
 	
-	Progress mProgress=null;
+	Progress mProgress = null;
     
     final private static int NUM_WORKERS = 3;
+    
+    public String mFileDateStamp = null;
+    public String mFileTimeStamp = null;
+    
+    public double mMinLat = 100.0;
+    public double mMaxLat = -100.0;
+    public double mMinLon = 200.0;
+    public double mMaxLon = -200.0;
     
     public OsmPbfFile() {
 		
@@ -28,27 +38,35 @@ public class OsmPbfFile {
 	
 	public boolean openFile(String fileName) {
 		
-		System.out.print("Opening PBF file <"+fileName+">... ");
-	
 		mOsmFile = new File(fileName);
 		
 		if (!mOsmFile.canRead()) {
 		
-			System.out.println("ERROR: File cannot be read");
+			Log.error("Failed to open PBF file <" + fileName + ">. File cannot be read");
 		
 			return false;
 		}
 		
-		System.out.println("Ok");
+		Log.info("PBF file <" + fileName + "> opened OK !!");
 		
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+			
+		mFileDateStamp = dateFormat.format(mOsmFile.lastModified());
+		
+		SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
+		
+		mFileTimeStamp = timeFormat.format(mOsmFile.lastModified());
+		
+		Log.info("PBF File modified date=" + mFileDateStamp + ", time="+mFileTimeStamp);
+	
 		return true;
 	}
 	
 	public boolean getObjectCount() {
 		
-		System.out.println("getObjectCount() started...");
+		Log.info("Getting PBF object count...");
         
-		Instant start=Instant.now();
+		Instant start = Instant.now();
 		
 		AtomicInteger numberOfNodes = new AtomicInteger();
 		AtomicInteger numberOfWays = new AtomicInteger();
@@ -66,6 +84,24 @@ public class OsmPbfFile {
                 if (entity instanceof Node) {
                 	
                     numberOfNodes.incrementAndGet();
+                    
+                    Node node = (Node) entity;
+                    
+                    double lat = node.getLatitude();
+                    double lon = node.getLongitude();
+                    
+                    if (lat < mMinLat)
+                    	mMinLat = lat;
+                    
+                    if (lat > mMaxLat)
+                    	mMaxLat = lat;
+                    
+                    if (lon < mMinLon)
+                    	mMinLon = lon;
+                    
+                    if (lon > mMaxLon)
+                    	mMaxLon = lon;
+                    
                 }
                 else if (entity instanceof Way) {
                 
@@ -97,20 +133,25 @@ public class OsmPbfFile {
         }
         catch(OsmosisRuntimeException e) {
         	
-        	System.out.println("OsmosisRuntimeException: "+e.getMessage());          
+        	Log.error("OsmosisRuntimeException: " + e.getMessage());          
         }
  
-        System.out.println(" - "+numberOfNodes.get() + " nodes were found.");
-        System.out.println(" - "+numberOfWays.get() + " ways were found.");
-        System.out.println(" - "+numberOfRelations.get() + " relations were found.");
+        Log.info(String.format(Locale.US, " - %,d nodes were found", numberOfNodes.get()));
+        Log.info(String.format(Locale.US, " - %,d ways were found", numberOfWays.get()));
+        Log.info(String.format(Locale.US, " - %,d relations were found", numberOfRelations.get()));
         
-        Instant end=Instant.now();
+        Log.info(String.format(Locale.US, " - MinLon= %3.5f", mMinLon));
+        Log.info(String.format(Locale.US, " - MaxLon= %3.5f", mMaxLon));
+        Log.info(String.format(Locale.US, " - MinLat= %3.5f", mMinLat));
+        Log.info(String.format(Locale.US, " - MaxLat= %3.5f", mMaxLat));
         
-        String text="getObjectCount() took "+Util.timeFormat(start, end);
+        Instant end = Instant.now();
         
-        System.out.println(text);
+        String text = "PBF object count() took " + Util.timeFormat(start, end);
         
-        mProgress=new Progress();
+        Log.info(text);
+        
+        mProgress = new Progress();
         
         mProgress.setNodeCount(numberOfNodes.get());
         mProgress.setWayCount(numberOfWays.get());
@@ -121,7 +162,7 @@ public class OsmPbfFile {
 	
 	public boolean process(OsmDatabase db) {
 		
-		System.out.println("Processing OSM File:");
+		Log.info("Processing OSM File...");
 		
 		db.setAutoCommit(false);
 		
@@ -201,16 +242,16 @@ public class OsmPbfFile {
         }
         catch(OsmosisRuntimeException e) {
         	
-        	System.out.println("OsmosisRuntimeException: "+e.getMessage());          
+        	Log.error("OsmosisRuntimeException: "+e.getMessage());          
         }
  
-        System.out.println(" - "+numberOfNodes.get() + " nodes were found.");
-        System.out.println(" - "+numberOfWays.get() + " ways were found.");
-        System.out.println(" - "+numberOfRelations.get() + " relations were found.");
+        Log.info(String.format(Locale.US, " - %,d nodes processed", numberOfNodes.get()));
+        Log.info(String.format(Locale.US, " - %,d ways processed", numberOfWays.get()));
+        Log.info(String.format(Locale.US, " - %,d relations processed", numberOfRelations.get()));
         
         Instant end = Instant.now();
         
-        System.out.println("Process time took "+Util.timeFormat(start, end));
+        Log.info("Process time took " + Util.timeFormat(start, end));
         
         db.commit();
         
