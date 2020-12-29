@@ -32,11 +32,11 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
-	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/osmosis-core-0.48.3.jar"/>
-	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/osmosis-pbf2-0.48.3.jar"/>
+	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/osmosis-0.48.3/osmosis-core-0.48.3.jar"/>
+	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/osmosis-0.48.3/osmosis-pbf2-0.48.3.jar"/>
 	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/sqlite-jdbc-3.23.1.jar"/>
-	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/osmosis-extract-0.48.3.jar"/>
+	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/osmosis-0.48.3/osmosis-extract-0.48.3.jar"/>
 	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/protobuf-java-3.12.2.jar"/>
-	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/osmosis-osm-binary-0.48.3.jar"/>
+	<classpathentry kind="lib" path="C:/Devel/EclipseWorkspace/jars/osmosis-0.48.3/osmosis-osm-binary-0.48.3.jar"/>
 	<classpathentry kind="output" path="bin/default"/>
 </classpath>
