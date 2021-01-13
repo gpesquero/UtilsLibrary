@@ -10,9 +10,19 @@ public class MyWay  {
 	
 	Way mWay = null;
 	
+	public enum Oneway {
+		
+		UNDEF,
+		NO,
+		FORWARD,
+		BACKWARD
+	}
+	
+	/*
 	public final int NO_ONEWAY=0;
 	public final int ONEWAY_FORWARD=1;
 	public final int ONEWAY_BACKWARD=2;
+	*/
 	
 	public MyWay(Way way) {
 		
@@ -29,38 +39,39 @@ public class MyWay  {
 		return mWay.getWayNodes().get(mWay.getWayNodes().size()-1).getNodeId();
 	}
 
-	public int getOneway() {
+	public Oneway getOneway() {
 		
-		int oneway=NO_ONEWAY;
+		Oneway oneway = Oneway.UNDEF;
 		
-		Collection<Tag> tags=mWay.getTags();
+		Collection<Tag> tags = mWay.getTags();
 		
-		Iterator<Tag> tagIter=tags.iterator();
+		Iterator<Tag> tagIter = tags.iterator();
 		
 		while(tagIter.hasNext()) {
 			
-			Tag tag=tagIter.next();
+			Tag tag = tagIter.next();
 			
-			if (tag.getKey().compareTo("oneway")==0) {
+			if (tag.getKey().compareTo("oneway") == 0) {
 				
-				String value=tag.getValue();
+				String value = tag.getValue();
 				
-				if (value.compareTo("yes")==0) {
+				if (value.compareTo("yes") == 0) {
 					
-					oneway=ONEWAY_FORWARD;
+					oneway = Oneway.FORWARD;
 				}
-				else if (value.compareTo("no")==0) {
+				else if (value.compareTo("no") == 0) {
 					
-					oneway=NO_ONEWAY;
+					oneway = Oneway.NO;
 				}
-				else if (value.compareTo("-1")==0) {
+				else if (value.compareTo("-1") == 0) {
 					
-					oneway=ONEWAY_BACKWARD;
+					oneway = Oneway.BACKWARD;
 				}
 				else {
 					
-					Log.warning("MyWay.getOneway(): Unknown <oneway> tag value <"+value+">");
-					oneway=NO_ONEWAY;
+					Log.warning("MyWay.getOneway(): Unknown <oneway> tag value '" + value + "'");
+					
+					oneway = Oneway.NO;
 				}
 				
 				break;				

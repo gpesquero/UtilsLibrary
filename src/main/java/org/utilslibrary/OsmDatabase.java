@@ -696,6 +696,8 @@ public class OsmDatabase {
 	
 	public Coord getRelationCoord(Relation relation) {
 		
+		Coord coord = null;
+		
 		List<RelationMember> members = relation.getMembers();
 		
 		Iterator<RelationMember> iter = members.iterator();
@@ -708,27 +710,39 @@ public class OsmDatabase {
 			
 			if (type == EntityType.Node) {
 				
-				return getNodeCoord(member.getMemberId());
-			}
-			else if (type == EntityType.Way) {
-				
-				return getWayCoord(member.getMemberId());
-			}
-			else if (type == EntityType.Relation) {
-				
-				Coord coord = getRelationCoord(member.getMemberId());
+				coord = getNodeCoord(member.getMemberId());
 				
 				if (coord != null) {
 					
-					return coord;
+					break;
+				}
+			}
+			else if (type == EntityType.Way) {
+				
+				coord = getWayCoord(member.getMemberId());
+				
+				if (coord != null) {
+					
+					break;
+				}
+			}
+			else if (type == EntityType.Relation) {
+				
+				coord = getRelationCoord(member.getMemberId());
+				
+				if (coord != null) {
+					
+					break;
 				}
 			}
 		}
 		
-		Log.warning("No valid coord found in <Relation #"+relation.getId()+">");
+		if (coord == null) {
+			
+			Log.warning("No valid coord found in <Relation #"+relation.getId()+">");
+		}
 		
-		// No nodes or ways found in relation		
-		return null;
+		return coord;
 	}
 	
 	public Node getNodeById(long nodeId) {
@@ -827,6 +841,7 @@ public class OsmDatabase {
 		PreparedStatement pstmt=null;
 		
 		try {
+			
 			pstmt = mConn.prepareStatement(sql);
 			pstmt.setLong(1, nodeId);
 			
@@ -1082,7 +1097,7 @@ public class OsmDatabase {
 			}
 		}
 		
-		Log.warning("Tag key '"+tagKey+"' not found in relation with Id #"+relId);
+		Log.debug("Tag key '" + tagKey + "' not found in relation with Id #" + relId);
 		
 		return null;
 	}
@@ -1402,7 +1417,7 @@ public class OsmDatabase {
 		}
 	}
 	
-public void checkHikingSuperRoute(Relation relation) {
+	public void checkHikingSuperRoute(Relation relation) {
 		
 		boolean isHikingRoute=false;
 		
