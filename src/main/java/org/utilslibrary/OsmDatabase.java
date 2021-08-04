@@ -504,24 +504,24 @@ public class OsmDatabase {
         	switch(member.getMemberType()) {
         	
         	case Bound:
-        		memberType=0;
+        		memberType = 0;
         		break;
         		
         	case Node:
-        		memberType=1;
+        		memberType = 1;
         		break;
         		
         	case Way:
-        		memberType=2;
+        		memberType = 2;
         		break;
         		
         	case Relation:
-        		memberType=3;
+        		memberType = 3;
         		break;
         		
         	default:
         		Log.warning("addRelation() member: Unknown relation member type");
-        		memberType=-1;
+        		memberType = -1;
                 break;
         	}
     		
@@ -562,9 +562,9 @@ public class OsmDatabase {
 			e.printStackTrace();
 		}
 		
-		Date timestamp=new Date();
+		Date timestamp = new Date();
 		
-		OsmUser user=new OsmUser(0, "user");
+		OsmUser user = new OsmUser(0, "user");
 		
 		CommonEntityData entityData=new CommonEntityData(id, version, timestamp, user, 0);
 		
@@ -747,14 +747,14 @@ public class OsmDatabase {
 	
 	public Node getNodeById(long nodeId) {
 		
-		Node node=null;
+		Node node = null;
 		
-		int version=0;
-		Date timeStamp=null;
-		OsmUser user=null;
-		long changesetId=0;
+		int version = 0;
+		Date timeStamp = null;
+		OsmUser user = null;
+		long changesetId = 0;
 		
-		Collection<Tag> tags=getNodeTags(nodeId);
+		Collection<Tag> tags = getNodeTags(nodeId);
 		
 		if (tags==null) {
 			
@@ -763,13 +763,13 @@ public class OsmDatabase {
 			return null;
 		}
 		
-		CommonEntityData entityData=new CommonEntityData(nodeId, version,
+		CommonEntityData entityData = new CommonEntityData(nodeId, version,
 				timeStamp, user, changesetId, tags);
 		
-		Coord coord=getNodeCoord(nodeId);
+		Coord coord = getNodeCoord(nodeId);
 		
-		if (coord!=null)
-			node=new Node(entityData, coord.mLat, coord.mLon);
+		if (coord != null)
+			node = new Node(entityData, coord.mLat, coord.mLon);
 		
 		return node;
 	}
@@ -873,33 +873,33 @@ public class OsmDatabase {
 	
 	public Way getWayById(long wayId) {
 		
-		int version=0;
-		Date timeStamp=null;
-		OsmUser user=null;
-		long changesetId=0;
+		int version = 0;
+		Date timeStamp = null;
+		OsmUser user = null;
+		long changesetId = 0;
 		
-		Collection<Tag> tags=getWayTags(wayId);
+		Collection<Tag> tags = getWayTags(wayId);
 		
-		if (tags==null) {
+		if (tags == null) {
 			
-			Log.error("Error while getting tags of way #"+wayId);
-			
-			return null;
-		}
-		
-		List<WayNode> wayNodes=getWayNodes(wayId);
-		
-		if (wayNodes==null) {
-			
-			Log.error("Error while getting members of way #"+wayId);
+			Log.error("Error while getting tags of way #" + wayId);
 			
 			return null;
 		}
 		
-		CommonEntityData entityData=new CommonEntityData(wayId, version,
+		List<WayNode> wayNodes = getWayNodes(wayId);
+		
+		if (wayNodes == null) {
+			
+			Log.error("Error while getting members of way #" + wayId);
+			
+			return null;
+		}
+		
+		CommonEntityData entityData = new CommonEntityData(wayId, version,
 				timeStamp, user, changesetId, tags);
 		
-		Way way=new Way(entityData, wayNodes);
+		Way way = new Way(entityData, wayNodes);
 		
 		return way;
 	}
@@ -952,7 +952,7 @@ public class OsmDatabase {
 	
 	public List<WayNode> getWayNodes(long wayId) {
 		
-		ArrayList<WayNode> wayNodes=new ArrayList<WayNode>();
+		ArrayList<WayNode> wayNodes = new ArrayList<WayNode>();
 		
 		String sql=
 				"SELECT\n" + 
@@ -966,19 +966,19 @@ public class OsmDatabase {
 				"ORDER BY\n"+
 				" sequence ASC";
 		
-		PreparedStatement pstmt=null;
+		PreparedStatement pstmt = null;
 		
 		try {
 			pstmt = mConn.prepareStatement(sql);
 			pstmt.setLong(1, wayId);
 			
-			ResultSet rs=pstmt.executeQuery();
+			ResultSet rs = pstmt.executeQuery();
 			
 			while(rs.next()) {
 				
-				Long nodeId=rs.getLong("node_id");
+				Long nodeId = rs.getLong("node_id");
 				
-				WayNode wayNode=new WayNode(nodeId);
+				WayNode wayNode = new WayNode(nodeId);
 				
 				wayNodes.add(wayNode);
 			}
@@ -989,9 +989,9 @@ public class OsmDatabase {
 			
 		} catch (SQLException e) {
 			
-			System.out.println("Error: "+e.getMessage());
+			System.out.println("Error: " + e.getMessage());
 			
-			wayNodes=null;
+			wayNodes = null;
 		}
 		
 		return wayNodes;
@@ -999,33 +999,33 @@ public class OsmDatabase {
 	
 	public Relation getRelationById(long relId) {
 		
-		int version=0;
-		Date timeStamp=null;
-		OsmUser user=null;
-		long changesetId=0;
+		int version = 0;
+		Date timeStamp = null;
+		OsmUser user = null;
+		long changesetId = 0;
 		
-		Collection<Tag> tags=getRelationTags(relId);
+		Collection<Tag> tags = getRelationTags(relId);
 		
-		if (tags==null) {
+		if (tags == null) {
 			
-			Log.error("Error while getting tags of relation #"+relId);
-			
-			return null;
-		}
-		
-		List<RelationMember> members=getRelationMembers(relId);
-		
-		if (members==null) {
-			
-			Log.error("Error while getting members of relation #"+relId);
+			Log.error("Error while getting tags of relation #" + relId);
 			
 			return null;
 		}
 		
-		CommonEntityData entityData=new CommonEntityData(relId, version,
+		List<RelationMember> members = getRelationMembers(relId);
+		
+		if (members == null) {
+			
+			Log.error("Error while getting members of relation #" + relId);
+			
+			return null;
+		}
+		
+		CommonEntityData entityData = new CommonEntityData(relId, version,
 				timeStamp, user, changesetId, tags);
 		
-		Relation relation=new Relation(entityData, members);
+		Relation relation = new Relation(entityData, members);
 		
 		return relation;
 	}
@@ -1357,133 +1357,67 @@ public class OsmDatabase {
 		return output;
 	}
 	
-	public void checkHiking(List<Long> relIds) {
+	public List<Long> getParentRelIdsOfNode(Long nodeId) {
 		
-		Iterator<Long> relIter=relIds.iterator();
-		
-		while(relIter.hasNext()) {
-			
-			Long relId=relIter.next();
-			
-			Relation rel=getRelationById(relId);
-			
-			if (rel!=null)
-				checkHikingRelation(rel);			
-		}		
+		return getParentRelIdsOfItem(1, nodeId);
 	}
 	
-	public void checkHikingRelation(Relation relation) {
+	public List<Long> getParentRelIdsOfWay(Long wayId) {
 		
-		boolean processed=false;
-		
-		Collection<Tag> relTags=relation.getTags();
-		
-		Iterator<Tag> tagIter=relTags.iterator();
-		
-		while(tagIter.hasNext()) {
-			
-			Tag tag=tagIter.next();
-			
-			if (tag.getKey().compareTo("type")==0) {
-				
-				if (tag.getValue().compareTo("route")==0) {
-					
-					checkHikingRoute(relation);
-					
-					processed=true;
-					
-					break;
-				}
-				else if (tag.getValue().compareTo("superroute")==0) {
-				
-					checkHikingSuperRoute(relation);
-					
-					processed=true;
-					
-					break;
-				}
-				else {
-					
-					Log.warning("Hiking: Relation #"+relation.getId()+" has an incorrect type <"+tag.getValue()+">");
-					
-					break;
-				}
-			}				
-		}
-		
-		if (!processed) {
-			
-			Log.warning("Hiking: Relation #"+relation.getId()+" is not a route or superroute");
-		}
+		return getParentRelIdsOfItem(2, wayId);
+	}
+
+	public List<Long> getParentRelIdsOfRelation(Long relId) {
+	
+		return getParentRelIdsOfItem(3, relId);
 	}
 	
-	public void checkHikingSuperRoute(Relation relation) {
+	private List<Long> getParentRelIdsOfItem(int memberType, long memberId) {
 		
-		boolean isHikingRoute=false;
+		//Instant start = Instant.now();
 		
-		Collection<Tag> relTags=relation.getTags();
+		ArrayList<Long> parentRels = new ArrayList<Long>();
 		
-		Iterator<Tag> tagIter=relTags.iterator();
+		String sql=
+				"SELECT " + 
+				"rel_id " + 
+				"FROM " + 
+				"relation_members " + 
+				"WHERE " + 
+				"member_type=? AND member_id=?";
 		
-		while(tagIter.hasNext()) {
+		PreparedStatement pstmt = null;
+		
+		try {
+			pstmt = mConn.prepareStatement(sql);
+			pstmt.setInt(1, memberType);
+			pstmt.setLong(2, memberId);
 			
-			Tag tag=tagIter.next();
+			ResultSet rs = pstmt.executeQuery();
 			
-			if (tag.getKey().compareTo("route")==0) {
+			if (rs.next()) {
 				
-				if (tag.getValue().compareTo("hiking")==0) {
-					
-					isHikingRoute=true;
-				}
-			}
-		}
+				long relId = rs.getLong("rel_id");
 				
-		if (!isHikingRoute) {
-			
-			Log.warning("Hiking: Super Route Relation #"+relation.getId()+" is not a hiking route");
-		}
-		
-		int numberOfRoutes=0;
-		
-		List<RelationMember> members=relation.getMembers();
-		
-		for(int pos=0; pos<members.size(); pos++) {
-			
-			RelationMember member=members.get(pos);
-			
-			if (!member.getMemberRole().isEmpty()) {
-				
-				Log.warning("Hiking: Super Route Relation #"+relation.getId()+": Member in pos <"+pos+
-						"> does not have an empty role <"+member.getMemberRole()+">");
+				parentRels.add(relId);
 			}
 			
-			if (member.getMemberType()==EntityType.Relation) {
-				
-				Relation routeRel=getRelationById(member.getMemberId());
-				
-				checkHikingRoute(routeRel);
-				
-				numberOfRoutes++;				
-			}
-			else {
-				
-				Log.warning("Hiking: Super Route Relation #"+relation.getId()+": Member in pos <"+pos+
-						"> is not a relation");
-			}				
+			rs.close();
+			
+			pstmt.close();
+		
+		} catch (SQLException e) {
+			
+			Log.error(e.getMessage());
 		}
 		
-		if (numberOfRoutes<1) {
-			
-			Log.warning("Hiking: Super Route Relation #"+relation.getId()+": Super Route does not have any relation");			
-		}
-		else if (numberOfRoutes<2) {
-			
-			Log.warning("Hiking: Super Route Relation #"+relation.getId()+": Super Route only has 1 relation");			
-		}
-	}
-	
-	public void checkHikingRoute(Relation relation) {
-	
+		//Instant end = Instant.now();
+		
+		//long time = Duration.between(start, end).toMillis();
+		
+		//Log.info("getParentRelIdsOfItem took " + time + " ms");
+		
+		return parentRels;
 	}
 	
 	public void saveDatabaseInfo(OsmPbfFile pbf) {

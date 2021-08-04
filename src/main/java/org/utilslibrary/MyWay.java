@@ -2,13 +2,16 @@ package org.utilslibrary;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
+import org.openstreetmap.osmosis.core.domain.v0_6.CommonEntityData;
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 import org.openstreetmap.osmosis.core.domain.v0_6.Way;
+import org.openstreetmap.osmosis.core.domain.v0_6.WayNode;
 
 public class MyWay  {
 	
-	Way mWay = null;
+	private Way mWay = null;
 	
 	public enum Oneway {
 		
@@ -18,15 +21,19 @@ public class MyWay  {
 		BACKWARD
 	}
 	
-	/*
-	public final int NO_ONEWAY=0;
-	public final int ONEWAY_FORWARD=1;
-	public final int ONEWAY_BACKWARD=2;
-	*/
-	
 	public MyWay(Way way) {
 		
-		mWay=way;
+		mWay = way;
+	}
+	
+	public MyWay(CommonEntityData data, List<WayNode> wayNodes) {
+		
+		mWay = new Way(data, wayNodes);
+	}
+	
+	public Way getWay() {
+		
+		return mWay;
 	}
 	
 	public long getFirstNodeId() {
@@ -104,29 +111,74 @@ public class MyWay  {
 		return type;
 	}
 
-	public boolean isRoundabout() {
+	public boolean hasJunctionRoundaboutTag() {
 		
-		boolean result=false;
+		boolean result = false;
 		
-		Collection<Tag> tags=mWay.getTags();
+		Collection<Tag> tags = mWay.getTags();
 		
-		Iterator<Tag> tagIter=tags.iterator();
+		Iterator<Tag> tagIter = tags.iterator();
 		
 		while(tagIter.hasNext()) {
 			
-			Tag tag=tagIter.next();
+			Tag tag = tagIter.next();
 			
-			if (tag.getKey().compareTo("junction")==0) {
+			if (tag.getKey().compareTo("junction") == 0) {
 				
-				if (tag.getValue().compareTo("roundabout")==0) {
+				if (tag.getValue().compareTo("roundabout") == 0) {
 					
-					result=true;
+					result = true;
 				}
 				
-				break;				
+				break;
 			}
 		}
 		
 		return result;
+	}
+	
+	public boolean isRoundabout() {
+		
+		if (hasJunctionRoundaboutTag()==false) {
+			
+			// The way does not have the 'junction=roundabout' tag
+			return false;
+		}
+		
+		// This way is a roundabout if it's a closed way...	
+		return mWay.isClosed();
+	}
+	
+	public boolean containsNode(long nodeId) {
+		
+		List<WayNode> wayNodes = mWay.getWayNodes();
+		
+		Iterator<WayNode> iter = wayNodes.iterator();
+		
+		while(iter.hasNext()) {
+			
+			WayNode wayNode = iter.next();
+			
+			if (wayNode.getNodeId() == nodeId) {
+				
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	public void updateWayNodeCoords(OsmDatabase database) {
+		
+		List<WayNode> wayNodes = mWay.getWayNodes();
+		
+		for(int i=0; i<wayNodes.size(); i++) {
+			
+			WayNode wayNode = wayNodes.get(i);
+			
+			Coord nodeCoord = database.getNodeCoord(wayNode.getNodeId());
+			
+			wayNodes.set(i, new WayNode(wayNode.getNodeId(), nodeCoord.mLat, nodeCoord.mLon));
+		}
 	}
 }
